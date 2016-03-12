@@ -1,0 +1,691 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="redis," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="Redis Intset结构是用来实现REDIS_ENCODING_INTSET对象编码的。当一个Redis set对象中所有的元素都是整数的时候适合用REDIS_ENCODING_INTSET对象编码来存储。不同于数组，Intset能够存储不同字节长度的整数，并且是按照有序的方式存到intset结构中来的。
+Intset结构12345typedef struct intset&amp;#123;	uin">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis Intset实现">
+<meta property="og:url" content="http://iovcc.com/2015/10/12/Redis-Intset实现/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="Redis Intset结构是用来实现REDIS_ENCODING_INTSET对象编码的。当一个Redis set对象中所有的元素都是整数的时候适合用REDIS_ENCODING_INTSET对象编码来存储。不同于数组，Intset能够存储不同字节长度的整数，并且是按照有序的方式存到intset结构中来的。
+Intset结构12345typedef struct intset&amp;#123;	uin">
+<meta property="og:image" content="http://iovcc.com/images/emptyintset.png">
+<meta property="og:image" content="http://iovcc.com/images/INTSET_ENC_INT16.png">
+<meta property="og:image" content="http://iovcc.com/images/INTSET_ENC_INT16_1.png">
+<meta property="og:image" content="http://iovcc.com/images/INTSET_ENC_INT32.png">
+<meta property="og:image" content="http://iovcc.com/images/INTSET_ENC_INT32_1.png">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.195Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis Intset实现">
+<meta name="twitter:description" content="Redis Intset结构是用来实现REDIS_ENCODING_INTSET对象编码的。当一个Redis set对象中所有的元素都是整数的时候适合用REDIS_ENCODING_INTSET对象编码来存储。不同于数组，Intset能够存储不同字节长度的整数，并且是按照有序的方式存到intset结构中来的。
+Intset结构12345typedef struct intset&amp;#123;	uin">
+<meta name="twitter:image" content="http://iovcc.com/images/emptyintset.png">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Redis Intset实现 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Redis Intset实现
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2015-10-12T09:24:21+08:00" content="2015-10-12">
+            2015-10-12
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/redis/" itemprop="url" rel="index">
+                  <span itemprop="name">redis</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2015/10/12/Redis-Intset实现/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2015/10/12/Redis-Intset实现/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>Redis Intset结构是用来实现REDIS_ENCODING_INTSET对象编码的。当一个Redis set对象中所有的元素都是整数的时候适合用REDIS_ENCODING_INTSET对象编码来存储。<br>不同于数组，Intset能够存储不同字节长度的整数，并且是按照有序的方式存到intset结构中来的。</p>
+<h3 id="Intset结构"><a href="#Intset结构" class="headerlink" title="Intset结构"></a>Intset结构</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> intset&#123;</span><br><span class="line">	<span class="keyword">uint32_t</span> encoding;</span><br><span class="line">	<span class="keyword">uint32_t</span> length;</span><br><span class="line">	<span class="keyword">int8_t</span> contents[];</span><br><span class="line">&#125;intset;</span><br></pre></td></tr></table></figure>
+<p>length字段表示目前intset结构中有多少个元素。<br>contents为占位符，代表元素的起始地址。<br>Intset结构中的encoding字段可以有以下的取值:<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTSET_ENC_INT16 (sizeof(int16_t))</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTSET_ENC_INT32 (sizeof(int32_t))</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTSET_ENC_INT64 (sizeof(int64_t))</span></span><br></pre></td></tr></table></figure></p>
+<ol>
+<li>INTSET_ENC_INT16表示当前intset结构中的元素按照16位的整数来存储的</li>
+<li>INTSET_ENC_INT32表示当前intset结构中的元素按照32位的整数来存储的</li>
+<li>INTSET_ENC_INT64表示当前intset结构中的元素按照64位的整数来存储的</li>
+</ol>
+<hr>
+<p>特别注意的是，encoding字段取值只能前进不能倒退，意思就是如果如果当前encoding字段的值是INTSET_ENC_INT32，那么就不能在给encoding赋值为INTSET_ENC_INT16了，只能保持不变或者赋值为INTSET_ENC_INT64。</p>
+<h3 id="新建一个Intset结构"><a href="#新建一个Intset结构" class="headerlink" title="新建一个Intset结构"></a>新建一个Intset结构</h3><p>新建一个Intset结构时，默认的encoding字段设置为INTSET_ENC_INT16，表示当前intset结构中的整数按照16位整数来进行存取，初始的时候长度为0所以length字段设置为0<br><img src="/images/emptyintset.png" alt="empty intset"></p>
+<h3 id="Intset元素插入"><a href="#Intset元素插入" class="headerlink" title="Intset元素插入"></a>Intset元素插入</h3><p>当插入一个整数的时候，首先intset会检查该整数的最小编码方式，看最小能够用多少个字节来存储这个整数，如果能够用2个字节来存储这个整数，则这个整数的最小编码就是INTSET_ENC_INT16，如果要用4个字节来存储，最小编码就是INTSET_ENC_INT32，如果要用8个字节来存储，最小编码就是INTSET_ENC_INT64。</p>
+<h5 id="插入最小编码为INTSET-ENC-INT16的整数"><a href="#插入最小编码为INTSET-ENC-INT16的整数" class="headerlink" title="插入最小编码为INTSET_ENC_INT16的整数"></a>插入最小编码为INTSET_ENC_INT16的整数</h5><p>刚开始时，encoding字段也是INTSET_ENC_INT16，所以intset会按照encoding的方式来存储这个整数。<br>首先在intset中查找当前整数是否已经在intset中了，如果已经存在则不插入，如果不存在则分配两个字节的空间给新元素，找到插入点，然后插入进去。由于刚开始时，intset为空，所以直接插入到第一个位置。<br><img src="/images/INTSET_ENC_INT16.png" alt="INTSET_ENC_INT16"><br>我们在插入一个INTSET_ENC_INT16的整数。首先调整intset的大小，新分配两个字节的空间，在找到待插入点，假设当前元素比intset中存在的元素小，那么应该把待插入的元素插入到起始位置，所以首先要进行数据移位，然后再插入。<br><img src="/images/INTSET_ENC_INT16_1.png" alt="INTSET_ENC_INT16"></p>
+<h5 id="插入一个最小编码为INTSET-ENC-INT32的整数"><a href="#插入一个最小编码为INTSET-ENC-INT32的整数" class="headerlink" title="插入一个最小编码为INTSET_ENC_INT32的整数"></a>插入一个最小编码为INTSET_ENC_INT32的整数</h5><p>因为插入的元素要用4个字节存储，如果还是按照原先的encoding方式进行内存分配和移动位置的话，显然覆盖掉原先的元素。<br>首先intset把encoding赋值为新值INTSET_ENC_32。然后把以前旧的元素的最小编码进行提升，也就是通通改成INTSET_ENC_INT32的编码方式，用4个字节进行存储。所以接下来就是调整数据空间的大小，因为当前intset中已经有2个元素了，占用了4个字节，最小编码提升后，由于每一个元素要占用4个字节，所以旧元素总共要新增4个字节，在加上新插入的元素总共要增加8个字节的空间。<br><img src="/images/INTSET_ENC_INT32.png" alt="INTSET_ENC_INT32"><br>由于新插入的元素要么比当前intset中的元素都要大，要么都要小(因为当前intset中的元素以前都是INTSET_ENC_16编码的，也就是2个字节的整数，所以当前插入的元素是4个字节整数的，要么比当前intset中的元素都大，要么都要小(负数))，所以要么是插入到头部，要么是插入到尾部，假设插入的元素比当前intset中的元素都要小，所以插入到头部。<br><img src="/images/INTSET_ENC_INT32_1.png" alt="INTSET_ENC_INT32"><br>如果后续插入编码方式为INTSET_ENC_INT16的整数，那么由于当前encoding为INTSET_ENC_INT32，所以要按照encoidng的方式插入整数。如果后续插入的是INTSET_ENC_INT64的整数，则按照前面的方法一样。<br>至于从intset中删除元素，则很简单了，按照当前encoding的方式删除元素即可。</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/redis/" rel="tag">#redis</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/10/12/Redis-dict实现/" rel="prev">Redis dict实现</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/11/ziplist/" rel="next">Redis ziplist实现</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2015/10/12/Redis-Intset实现/"
+                   data-title="Redis Intset实现" data-url="http://iovcc.com/2015/10/12/Redis-Intset实现/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Intset结构"><span class="nav-number">1.</span> <span class="nav-text">Intset结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新建一个Intset结构"><span class="nav-number">2.</span> <span class="nav-text">新建一个Intset结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Intset元素插入"><span class="nav-number">3.</span> <span class="nav-text">Intset元素插入</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#插入最小编码为INTSET-ENC-INT16的整数"><span class="nav-number">3.0.1.</span> <span class="nav-text">插入最小编码为INTSET_ENC_INT16的整数</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#插入一个最小编码为INTSET-ENC-INT32的整数"><span class="nav-number">3.0.2.</span> <span class="nav-text">插入一个最小编码为INTSET_ENC_INT32的整数</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

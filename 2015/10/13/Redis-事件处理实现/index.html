@@ -1,0 +1,687 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="redis," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="Redis的事件处理框架底层的实现是对epoll，kqueue，select的包装。以epoll为例来讲事件框架的实现，其他实现类似。在Redis服务器启动伊始，会创建一个aeEventLoop结构实例。123456789101112typedef struct aeEventLoop&amp;#123;    int maxfd;   /* highest file descriptor current">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis-事件处理实现">
+<meta property="og:url" content="http://iovcc.com/2015/10/13/Redis-事件处理实现/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="Redis的事件处理框架底层的实现是对epoll，kqueue，select的包装。以epoll为例来讲事件框架的实现，其他实现类似。在Redis服务器启动伊始，会创建一个aeEventLoop结构实例。123456789101112typedef struct aeEventLoop&amp;#123;    int maxfd;   /* highest file descriptor current">
+<meta property="og:image" content="http://iovcc.com/images/aeEventLoop.png">
+<meta property="og:image" content="http://iovcc.com/images/aeFileEvent.png">
+<meta property="og:image" content="http://iovcc.com/images/aeEventLoop_1.png">
+<meta property="og:image" content="http://iovcc.com/images/aeEventLoop_2.png">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.327Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis-事件处理实现">
+<meta name="twitter:description" content="Redis的事件处理框架底层的实现是对epoll，kqueue，select的包装。以epoll为例来讲事件框架的实现，其他实现类似。在Redis服务器启动伊始，会创建一个aeEventLoop结构实例。123456789101112typedef struct aeEventLoop&amp;#123;    int maxfd;   /* highest file descriptor current">
+<meta name="twitter:image" content="http://iovcc.com/images/aeEventLoop.png">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> Redis-事件处理实现 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              Redis-事件处理实现
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2015-10-13T15:50:26+08:00" content="2015-10-13">
+            2015-10-13
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/redis/" itemprop="url" rel="index">
+                  <span itemprop="name">redis</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2015/10/13/Redis-事件处理实现/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2015/10/13/Redis-事件处理实现/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>Redis的事件处理框架底层的实现是对epoll，kqueue，select的包装。以epoll为例来讲事件框架的实现，其他实现类似。<br>在Redis服务器启动伊始，会创建一个<code>aeEventLoop</code>结构实例。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> aeEventLoop&#123;</span><br><span class="line">    <span class="keyword">int</span> maxfd;   <span class="comment">/* highest file descriptor currently registered */</span></span><br><span class="line">    <span class="keyword">int</span> setsize; <span class="comment">/* max number of file descriptors tracked */</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> timeEventNextId;</span><br><span class="line">    <span class="keyword">time_t</span> lastTime;     <span class="comment">/* Used to detect system clock skew */</span></span><br><span class="line">    aeFileEvent *events; <span class="comment">/* Registered events */</span></span><br><span class="line">    aeFiredEvent *fired; <span class="comment">/* Fired events */</span></span><br><span class="line">    aeTimeEvent *timeEventHead;</span><br><span class="line">    <span class="keyword">int</span> stop;</span><br><span class="line">    <span class="keyword">void</span> *apidata; <span class="comment">/* This is used for polling API specific data */</span></span><br><span class="line">    aeBeforeSleepProc *beforesleep;</span><br><span class="line">&#125; aeEventLoop;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>maxfd表示目前注册的最大的文件描述符fd</li>
+<li>setsize表示事件库支持的最大文件描述符个数</li>
+<li>events是一个数组，当前注册的所有事件在里面</li>
+<li>fired是就绪事件数组，当前就绪的事件组成的一个数组<br>初始完aeEventLoop实例后，在创建一个<code>aeApiState</code>结构实例。<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> aeApiState&#123;</span><br><span class="line">	<span class="keyword">int</span> epfd;</span><br><span class="line">	<span class="keyword">struct</span> epoll_event *events;</span><br><span class="line">&#125;aeApiState;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>初始化一个epoll，得到的epoll描述符赋值给aeApiState实例的epfd字段。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">epfd= epoll_create(<span class="number">1024</span>)</span><br></pre></td></tr></table></figure></p>
+<p>可以看到，这样aeEventLoop就和epoll关联起来了。<br><img src="/images/aeEventLoop.png" alt="eventLoop"><br>当我们要注册一个文件读写事件时候，系统会创建一个<code>aeFileEvent</code>结构实例，代表该文件读写事件。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* File event structure */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> aeFileEvent &#123;</span><br><span class="line">    <span class="keyword">int</span> mask; <span class="comment">/* 事件掩码，表明注册的是文件读事件还是写事件，还是二者都有 */</span></span><br><span class="line">    aeFileProc *rfileProc; <span class="comment">/* 读事件处理函数 */</span></span><br><span class="line">    aeFileProc *wfileProc; <span class="comment">/* 写事件处理函数 */</span></span><br><span class="line">    <span class="keyword">void</span> *clientData;</span><br><span class="line">&#125; aeFileEvent;</span><br></pre></td></tr></table></figure></p>
+<p>然后根据文件描述符fd添加到aeEventLoop实例中的events数组中去，假设这里的fd为3，也就是events[3]。<br><img src="/images/aeFileEvent.png" alt="aeFileEvent"><br>接着把该fd和fd的事件注册到epoll中去。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//添加事件到epoll实例中去</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">aeApiAddEvent</span><span class="params">(aeEventLoop *eventLoop, <span class="keyword">int</span> fd, <span class="keyword">int</span> mask)</span> </span>&#123;</span><br><span class="line">    aeApiState *state = eventLoop-&gt;apidata;</span><br><span class="line">    <span class="keyword">struct</span> epoll_event ee;</span><br><span class="line">    <span class="keyword">int</span> op = eventLoop-&gt;events[fd].mask == AE_NONE ?</span><br><span class="line">            EPOLL_CTL_ADD : EPOLL_CTL_MOD;</span><br><span class="line">    ee.events = <span class="number">0</span>;</span><br><span class="line">    mask |= eventLoop-&gt;events[fd].mask; </span><br><span class="line">    <span class="keyword">if</span> (mask &amp; AE_READABLE) ee.events |= EPOLLIN; <span class="comment">/* 添加读事件 */</span></span><br><span class="line">    <span class="keyword">if</span> (mask &amp; AE_WRITABLE) ee.events |= EPOLLOUT; <span class="comment">/* 添加写事件 */</span></span><br><span class="line">    ee.data.u64 = <span class="number">0</span>; </span><br><span class="line">    ee.data.fd = fd;</span><br><span class="line">    <span class="keyword">if</span> (epoll_ctl(state-&gt;epfd,op,fd,&amp;ee) == <span class="number">-1</span>) <span class="keyword">return</span> <span class="number">-1</span>; <span class="comment">/* 注册到epoll中去 */</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>然后就是调用aeApiPoll函数等待事件的发生<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//等待epoll实例中相关fd的事件发生，返回就绪的事件个数</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">aeApiPoll</span><span class="params">(aeEventLoop *eventLoop, <span class="keyword">struct</span> timeval *tvp)</span> </span>&#123;</span><br><span class="line">    aeApiState *state = eventLoop-&gt;apidata;</span><br><span class="line">    <span class="keyword">int</span> retval, numevents = <span class="number">0</span>;</span><br><span class="line">    retval = epoll_wait(state-&gt;epfd,state-&gt;events,eventLoop-&gt;setsize,</span><br><span class="line">            tvp ? (tvp-&gt;tv_sec*<span class="number">1000</span> + tvp-&gt;tv_usec/<span class="number">1000</span>) : <span class="number">-1</span>);</span><br><span class="line">    <span class="keyword">if</span> (retval &gt; <span class="number">0</span>) &#123;</span><br><span class="line">    	当检测到有事件发生的时候，发生的事件会在state-&gt;events数组中，state-&gt;events是epoll_event结构。以前面注册的fd为<span class="number">3</span>的文件事件为例，当该fd的事件发生的时候，比如可读了或者可写了，epoll_wait便会初始化state-&gt;events[<span class="number">3</span>]结构：state-&gt;events[<span class="number">3</span>]-&gt;events=EPOLLI或者EPOLLOUT或者二者都有；state-&gt;events[<span class="number">3</span>]-&gt;data-&gt;fd=<span class="number">3</span>;</span><br><span class="line">    	接着会传递就绪事件到高层中去，也就是aeEventLoop中去，添加到对应的fired[<span class="number">3</span>]数组中。</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> numevents;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>下面是<code>aeFiredEvent</code>结构：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* A fired event */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> aeFiredEvent &#123;</span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="keyword">int</span> mask;</span><br><span class="line">&#125; aeFiredEvent;</span><br></pre></td></tr></table></figure></p>
+<p>mask表示对应的就绪事件，fd为就绪事件对应的文件描述符<br><img src="/images/aeEventLoop_1.png" alt="aeEventLoop"><br>这样当调用aeApiPoll函数后，就知道有哪些就绪事件可以处理了，就绪事件都存在aeEventLoop实例中的fired数组中，接下来就是一一处理fired数组中的时间了，调用注册时的注册的事件处理函数。<br>当处理完这一次调用aeApiPoll得到的事件后，Redis服务器又开始新一轮的循环，接着调用aeApiPoll函数开启下一轮事件处理。<br>至于时间事件处理基本和文件事件处理一样的。<br>下面画出了Redis服务器的事件处理流程图<br><img src="/images/aeEventLoop_2.png" alt="Redis 事件处理流程图"></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/redis/" rel="tag">#redis</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/10/13/fcntl-ioctl-setsockopt使用说明/" rel="prev">fcntl ioctl setsockopt使用说明</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/12/redisDB实现/" rel="next">redisDB数据库实现</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2015/10/13/Redis-事件处理实现/"
+                   data-title="Redis-事件处理实现" data-url="http://iovcc.com/2015/10/13/Redis-事件处理实现/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <p class="post-toc-empty">此文章未包含目录</p>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,679 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="redis," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="redis是什么？移步redis官网。redis支持的数据结构类型有很多，从简单的strings，到hashes，lists，sets，sorted sets等。那么redis内部是怎么组织数据的呢？本文的目的就是梳理redis内部数据结构的实现方式，看看数据在redis内部是怎么存储的。
+redis对象1234567typedef struct redisObject&amp;#123;	unsigne">
+<meta property="og:type" content="article">
+<meta property="og:title" content="redis对象系统">
+<meta property="og:url" content="http://iovcc.com/2015/10/08/redis对象系统/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="redis是什么？移步redis官网。redis支持的数据结构类型有很多，从简单的strings，到hashes，lists，sets，sorted sets等。那么redis内部是怎么组织数据的呢？本文的目的就是梳理redis内部数据结构的实现方式，看看数据在redis内部是怎么存储的。
+redis对象1234567typedef struct redisObject&amp;#123;	unsigne">
+<meta property="og:image" content="http://iovcc.com/images/list1.png">
+<meta property="og:image" content="http://iovcc.com/images/list2.png">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.128Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="redis对象系统">
+<meta name="twitter:description" content="redis是什么？移步redis官网。redis支持的数据结构类型有很多，从简单的strings，到hashes，lists，sets，sorted sets等。那么redis内部是怎么组织数据的呢？本文的目的就是梳理redis内部数据结构的实现方式，看看数据在redis内部是怎么存储的。
+redis对象1234567typedef struct redisObject&amp;#123;	unsigne">
+<meta name="twitter:image" content="http://iovcc.com/images/list1.png">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> redis对象系统 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              redis对象系统
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2015-10-08T20:08:04+08:00" content="2015-10-08">
+            2015-10-08
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/redis/" itemprop="url" rel="index">
+                  <span itemprop="name">redis</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2015/10/08/redis对象系统/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2015/10/08/redis对象系统/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>redis是什么？移步<a href="www.redis.io">redis官网</a>。<br>redis支持的数据结构类型有很多，从简单的strings，到hashes，lists，sets，sorted sets等。那么redis内部是怎么组织数据的呢？本文的目的就是梳理redis内部数据结构的实现方式，看看数据在redis内部是怎么存储的。</p>
+<h3 id="redis对象"><a href="#redis对象" class="headerlink" title="redis对象"></a>redis对象</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">struct</span> redisObject&#123;</span><br><span class="line">	<span class="keyword">unsigned</span> type:<span class="number">4</span>;</span><br><span class="line">	<span class="keyword">unsigned</span> encoding:<span class="number">4</span>;</span><br><span class="line">	<span class="keyword">unsigned</span> lru:REDIS_LRU_BITS;    <span class="comment">/* 和LRU算法相关的字段(先可以不关注这个字段) */</span></span><br><span class="line">	<span class="keyword">int</span> refcount;    <span class="comment">/* 引用次数，因为一个对象可能会被共享 */</span></span><br><span class="line">	<span class="keyword">void</span> *ptr;</span><br><span class="line">&#125;robj;</span><br></pre></td></tr></table></figure>
+<p>一个redis对象就是一个robj对象。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_STRING 0</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_LIST 1</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_SET 2</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ZSET 3</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_HASH 4</span></span><br></pre></td></tr></table></figure></p>
+<p>假如我们在一个robj对象内存储的是数据结构类型为string的对象，那么type就是REDIS_STRING，表示这个robj对象代表一个string类型的对象，而实际的这个string类型的对象由robj结构体中的ptr指针指向。假如是一个list对象，那么type字段的就是REDIS_LIST，表示这个robj对象代表一个list类型的对象，而实际的这个list类型的对象由ptr指针指向。</p>
+<h3 id="对象编码"><a href="#对象编码" class="headerlink" title="对象编码"></a>对象编码</h3><p>现在我们要新建一个由val1，val2和val3组成的list。那么redis是如何实现的呢？首先当然是创建一个robj对象，并且把type赋值为REDIS_LIST，引用计数设置为1。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">robj *listObj=<span class="built_in">malloc</span>(<span class="keyword">sizeof</span>(robj));</span><br><span class="line">listObj-&gt;type=REDIS_LIST;</span><br><span class="line">listObj-&gt;ref=<span class="number">1</span>;</span><br></pre></td></tr></table></figure></p>
+<p>那么redis内部是怎么表示这个由val1,val2,val3组成的list的呢？常规的方法可能是下面这样组织的:<br><img src="/images/list1.png" alt="list1"><br>我们也可以以数组的形式存储这个list:<br><img src="/images/list2.png" alt="list2"><br>这两种构造list的方式就是两种针对list类型对象的编码。对象的编码其实就是数据的组织方式，比如这里的list对象的数据组织既可以用链表的形式组织，也可以用数组的形式组织。为了知道当前对象是怎么编码的，我们把编码的代号赋值给robj结构的encoding字段。我们把第一种编码叫做NORMAL_LIST，第二种叫做ARRAY_LIST。当然redis内部是没有这两种编码的，在这里只是为了解释什么是对象编码。<br>下面就是redis目前支持的编码种类，这些编码方式都是结合了性能和存储效率这两方面的。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_RAW 0    <span class="comment">/* Raw representation */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_INT 1    <span class="comment">/* 编码为整数 */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_HT 2     <span class="comment">/* 编码为hash table */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_ZIPMAP 3    <span class="comment">/* 编码为zipmap */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_LINKEDLIST 4    <span class="comment">/* 编码为普通的linked list */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_ZIPLIST 5    <span class="comment">/* 编码为ziplist */</span>    </span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_INTSET 6    <span class="comment">/* 编码为intset */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_SKIPLIST 7    <span class="comment">/* 编码为skiplist */</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> REDIS_ENCODING_EMBSTR 8    <span class="comment">/*编码为嵌入的sds string */</span></span></span><br></pre></td></tr></table></figure></p>
+<p>接下来的一系列文章都会一一讲解这些编码方式，看看redis内部是怎么实现对象的存储的</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/redis/" rel="tag">#redis</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/10/08/sds/" rel="prev">Redis dynamic strings</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2015/10/08/redis对象系统/"
+                   data-title="redis对象系统" data-url="http://iovcc.com/2015/10/08/redis对象系统/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#redis对象"><span class="nav-number">1.</span> <span class="nav-text">redis对象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对象编码"><span class="nav-number">2.</span> <span class="nav-text">对象编码</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

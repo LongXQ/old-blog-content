@@ -1,0 +1,716 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="redis," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="为了更好的理解RESP协议，基于hiredis实现了一个RESP协议查看客户端RESP-client。代码托管在github上，感兴趣的可以用这个客户端实时查看redis client-server通信时RESP格式的数据
+
+
+RESP(REdis Serialization Protocol)协议是redis客户端和服务端进行通信的协议。RESP协议规定了5种数据格式:
+
+Simple Str">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RESP协议">
+<meta property="og:url" content="http://iovcc.com/2015/10/10/RESP/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="为了更好的理解RESP协议，基于hiredis实现了一个RESP协议查看客户端RESP-client。代码托管在github上，感兴趣的可以用这个客户端实时查看redis client-server通信时RESP格式的数据
+
+
+RESP(REdis Serialization Protocol)协议是redis客户端和服务端进行通信的协议。RESP协议规定了5种数据格式:
+
+Simple Str">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.232Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RESP协议">
+<meta name="twitter:description" content="为了更好的理解RESP协议，基于hiredis实现了一个RESP协议查看客户端RESP-client。代码托管在github上，感兴趣的可以用这个客户端实时查看redis client-server通信时RESP格式的数据
+
+
+RESP(REdis Serialization Protocol)协议是redis客户端和服务端进行通信的协议。RESP协议规定了5种数据格式:
+
+Simple Str">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> RESP协议 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              RESP协议
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2015-10-10T09:02:42+08:00" content="2015-10-10">
+            2015-10-10
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/redis/" itemprop="url" rel="index">
+                  <span itemprop="name">redis</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2015/10/10/RESP/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2015/10/10/RESP/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><blockquote>
+<p>为了更好的理解RESP协议，基于hiredis实现了一个RESP协议查看客户端RESP-client。代码托管在<a href="https://github.com/LongXQ/RESP-client" target="_blank" rel="external">github</a>上，感兴趣的可以用这个客户端实时查看redis client-server通信时RESP格式的数据</p>
+</blockquote>
+<hr>
+<p>RESP(REdis Serialization Protocol)协议是redis客户端和服务端进行通信的协议。<br>RESP协议规定了5种数据格式:</p>
+<ol>
+<li>Simple Strings</li>
+<li>Errors</li>
+<li>Integers</li>
+<li>Bulk Strings</li>
+<li>Arrays</li>
+</ol>
+<hr>
+<h3 id="Simple-Strings"><a href="#Simple-Strings" class="headerlink" title="Simple Strings"></a>Simple Strings</h3><p>一个Simple Strings格式的数据的第一个字符是”+”，后面跟着一串字符串,然后以”\r\n”结尾(注意的是字符串中不能含有”\r”或者”\n”)，如:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"+OK\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>假如客户端执行了<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SET name longxiongqiu</span><br></pre></td></tr></table></figure></p>
+<p>如果执行成功，则redis服务器就会向客户端回复一个Simple String格式的回复:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"+OK\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="RESP-Errors"><a href="#RESP-Errors" class="headerlink" title="RESP Errors"></a>RESP Errors</h3><p>RESP Errors格式和Simple Strings很相似，除了Errors的第一个字符是”-“。<br>格式如下:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"-Error message\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>当redis服务端出现一些异常或者错误的时候，就会回复客户端Errors格式的回复，如客户端发送了未知的命令(如foobar)给redis服务端，那么当redis服务端收到这些非法的请求的时候就会发送一个Errors格式的回复给客户端:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"-ERR unkonwn command 'foobar'"</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="RESP-Integers"><a href="#RESP-Integers" class="headerlink" title="RESP Integers"></a>RESP Integers</h3><p>顾名思义，一个RESP Integers格式的数据代表一个数字，如命令<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LLEN list</span><br></pre></td></tr></table></figure></p>
+<p>用来请求list的长度，当redis服务端收到该请求的时候，就会返回list的长度，假如此时list的长度为5:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">":5\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>可以看到一个RESP Integers格式的第一个字符是”:”,后面跟着”数字”然后以”\r\n”结尾。</p>
+<h3 id="RESP-Bulk-Strings"><a href="#RESP-Bulk-Strings" class="headerlink" title="RESP Bulk Strings"></a>RESP Bulk Strings</h3><p>Bulk Stings由以下三部分组成:<br>(1) 一个前缀字符”$”,”$”后面跟着字符串数据部分的长度,以”\r\n”结尾<br>(2) 字符串数据(最长可达512MB)<br>(3) 结尾的”\r\n”<br>比如一个”foobar”编码成Bulk Strings格式:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"<span class="variable">$6</span>\r\nfoobar\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>一个空字符串(长度为0的字符串)的Bulk String格式的表示是:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"<span class="variable">$0</span>\r\n\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>RESP Bulk Strings使用一种特殊格式的Null值用来通知某个值不存在，这种特殊格式的长度是-1，并且没有数据部分，所以一个Null的Bulk Strings格式的表达为:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"-1\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>这个叫做Null Bulk String。当redis客户端收到这样的回复信息的时候，应该返回一个nil对象</p>
+<h3 id="REAP-Arrays"><a href="#REAP-Arrays" class="headerlink" title="REAP Arrays"></a>REAP Arrays</h3><p>利用Bulk String格式我们可以很容易构造出单个字符串的Bulk String格式的数据。但是假如我们有多个字符串怎么办？还有假如我们要混合以上不同RESP格式的数据怎么办?这就要利用RESP Arrays了。<br>RESP Arrays格式由以下部分组成:<br>(1) “*”字符作为第一个字符，然后跟着元素的个数，以”\r\n”结尾<br>(2) 对于Arrays中的每一个元素，构造额外的RESP格式的数据<br>当一个Arrays由两个Bulk Strings “foo”和”bar”组成的时候:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"*2\r\n<span class="variable">$3</span>\r\nfoo\r\n<span class="variable">$3</span>\r\nbar\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>当然一个Arrays里面可能有不同格式的元素组成:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"*5\r\n:1\r\n<span class="variable">$5</span>\r\nHello\r\n<span class="variable">$5</span>\r\nworld\r\n+Foo\r\n-Bar\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>一个Arrays的元素也可以是一个Arrays:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"*2\r\n*3\r\n:1\r\n:2\r\n:3\r\n<span class="variable">$3</span>\r\nFOO\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>一个空Array的格式如下:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"*0\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>一个Null Array的格式如下:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"*-1\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="RESP示例"><a href="#RESP示例" class="headerlink" title="RESP示例"></a>RESP示例</h3><p>当我们要发送命令:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LLEN mylist</span><br></pre></td></tr></table></figure></p>
+<p>给redis服务端的时候，我们来看看这些命令怎么转换成RESP格式的:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">"*2\r\n<span class="variable">$4</span>\r\nLLEN\r\n<span class="variable">$6</span>\r\nmylist\r\n"</span></span><br></pre></td></tr></table></figure></p>
+<p>如果此时mylist的长度为1024，看看返回给redis客户端的RESP格式的回复是什么样的:<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">":1024\r\n"</span></span><br></pre></td></tr></table></figure></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/redis/" rel="tag">#redis</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/10/11/ziplist/" rel="prev">Redis ziplist实现</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/08/sds/" rel="next">Redis dynamic strings</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2015/10/10/RESP/"
+                   data-title="RESP协议" data-url="http://iovcc.com/2015/10/10/RESP/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Simple-Strings"><span class="nav-number">1.</span> <span class="nav-text">Simple Strings</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RESP-Errors"><span class="nav-number">2.</span> <span class="nav-text">RESP Errors</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RESP-Integers"><span class="nav-number">3.</span> <span class="nav-text">RESP Integers</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RESP-Bulk-Strings"><span class="nav-number">4.</span> <span class="nav-text">RESP Bulk Strings</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#REAP-Arrays"><span class="nav-number">5.</span> <span class="nav-text">REAP Arrays</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RESP示例"><span class="nav-number">6.</span> <span class="nav-text">RESP示例</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

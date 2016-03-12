@@ -1,0 +1,681 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="socket编程," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="TCP连接是全双工连接，类似于下面：上图中表示主机A和B通过TCP建立了全双工连接，也就是任意一端都可以发送和接收数据。当主机A和B建立成功后，A和B就处于ESTABLISHED状态了。当一端主动调用close系统调用来关闭TCP连接，系统就处于关闭阶段了：我们忽略了关闭过程中的中间一些状态。主动关闭一方最后处于TIME_WAIT状态的时间一般为2MSL。MSL是最长分节生命，也就是一个IP数据报">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TIME_WAIT状态">
+<meta property="og:url" content="http://iovcc.com/2015/10/23/TCP-WAIT/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="TCP连接是全双工连接，类似于下面：上图中表示主机A和B通过TCP建立了全双工连接，也就是任意一端都可以发送和接收数据。当主机A和B建立成功后，A和B就处于ESTABLISHED状态了。当一端主动调用close系统调用来关闭TCP连接，系统就处于关闭阶段了：我们忽略了关闭过程中的中间一些状态。主动关闭一方最后处于TIME_WAIT状态的时间一般为2MSL。MSL是最长分节生命，也就是一个IP数据报">
+<meta property="og:image" content="http://iovcc.com/images/time_wait.png">
+<meta property="og:image" content="http://iovcc.com/images/time_wait1.png">
+<meta property="og:image" content="http://iovcc.com/images/time_wait2.png">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.156Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="TIME_WAIT状态">
+<meta name="twitter:description" content="TCP连接是全双工连接，类似于下面：上图中表示主机A和B通过TCP建立了全双工连接，也就是任意一端都可以发送和接收数据。当主机A和B建立成功后，A和B就处于ESTABLISHED状态了。当一端主动调用close系统调用来关闭TCP连接，系统就处于关闭阶段了：我们忽略了关闭过程中的中间一些状态。主动关闭一方最后处于TIME_WAIT状态的时间一般为2MSL。MSL是最长分节生命，也就是一个IP数据报">
+<meta name="twitter:image" content="http://iovcc.com/images/time_wait.png">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> TIME_WAIT状态 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              TIME_WAIT状态
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2015-10-23T09:33:52+08:00" content="2015-10-23">
+            2015-10-23
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/Linux系统编程/" itemprop="url" rel="index">
+                  <span itemprop="name">Linux系统编程</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2015/10/23/TCP-WAIT/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2015/10/23/TCP-WAIT/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>TCP连接是全双工连接，类似于下面：<br><img src="/images/time_wait.png" alt="TCP全双工连接"><br>上图中表示主机A和B通过TCP建立了全双工连接，也就是任意一端都可以发送和接收数据。<br>当主机A和B建立成功后，A和B就处于ESTABLISHED状态了。当一端主动调用close系统调用来关闭TCP连接，系统就处于关闭阶段了：<br><img src="/images/time_wait1.png" alt="关闭TCP连接"><br>我们忽略了关闭过程中的中间一些状态。<br>主动关闭一方最后处于TIME_WAIT状态的时间一般为2MSL。MSL是最长分节生命，也就是一个IP数据报在网络中能够生存的最长时间。为了解释为什么TIME_WAIT状态时间为2MSL，而不是MSL或者当发送完最后一个ACK立马就关闭成功，我们假设下面两种情况。</p>
+<ol>
+<li>对端没有成功接收最后一个ACK，那么对端就会认为它前面发送的FIN报文对端没有成功接收，那么它就会重发FIN报文，然后继续等待ACK。我们算下重发FIN报文到对端接收重发的FIN报文要多久时间。首先主动关闭一方发送ACK，那么ACK报文最长的生存时间为MSL，当对端到一个报文的最长生命周期内还没有收到ACK报文，它肯定就是重发FIN报文，那么FIN报文传送过来的最长时间也是MSL，所以为了确保最后一个ACK成功发送给了对端，TIME_WAIT状态的持续时间为2MSL。</li>
+<li>当最后一个ACK报文对端成功接收后，算是关闭成功了，但是有可能对端在收到最后一个ACK报文前，它前面发送的一些数据还没有到达对方，那么就会出现一些问题。假如我们close调用后，马上又建立一个和前面一样的TCP连接，那么这部分后达到的数据就会被新建立的TCP连接接收到，这很明显是错误的，所以关闭一个TCP连接时，还要有一个TIME_WAIT状态保证该TCP连接阶段所有的数据都在网络中不存在了，因为我们知道TIME_WAIT持续的时间为2MSL，那么在这段时间内，和该TCP连接有关的所有数据肯定都会消亡的。这样就不会被新建的TCP连接接收到了。</li>
+</ol>
+<p>上面的情况2要成立，要保证地址不能复用，就是当一个地址处于TIME_WAIT状态的时候，新建一个socket的地址不能和它一样。系统默认就是这样处理，但是我们也可以关闭这个，允许地址可以复用，也就是处于TIME_WAIT状态的地址可以被新建的socket复用，只要设置SO_REUSEADDR选项就可以了，但是如果这样就不能完全保证上面的情况2了。</p>
+<p>从上面看到，close系统调用时关闭了两端，但是很多情况下，我们只想关闭一端，而允许另外一端接着发送数据：<br><img src="/images/time_wait2.png" alt="单通道关闭"><br>从图中可以看到我们只关闭了A端的写入口，当关闭了A端后，如果B还要读，那么会接收到FIN，表明已经没有数据可以读了。但是B端还可以进行写，A端还可以从B端接收数据。<br>我们用shutdown系统调用可以实现上面的功能。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/socket.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">shutdown</span><span class="params">(<span class="keyword">int</span> sockfd,<span class="keyword">int</span> howto)</span></span>;</span><br></pre></td></tr></table></figure></p>
+<p>howto可以为SHUTRD,SHUT_WR,SHUTRDWE，分别为关闭sockfd的读端，写端，读写端(和close一样)。<br>当关闭一个socket的读端后，接收缓冲区里面的数据全都被丢弃，以后不能调用任何读函数了。但是该socket还是可以接收对端发送来的数据并发送确认，但是之后不会交给进程，而是会悄然丢弃掉。从这里我们可以看到关闭写端并没有实质的进行关闭，也就是不会发送FIN之类的给对端，所以对端还能正常发送数据。</p>
+<p>从上面可以看到一个成功的关闭要包含发送FIN，接收ACK这过程，也就是说如果没有包含这一个过程就算异常退出。<br>如果一端程序突然奔溃或者关闭阶段某一步出现错误，如果对方继续读写对端，会导致奔溃的一端TCP发送RST重置连接，表明出现了错误重置。对于写则还会抛出一个SIGPIPE异常的</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/socket编程/" rel="tag">#socket编程</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/10/25/当socket关闭后的读写问题/" rel="prev">TCP关闭后的读写总结</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/13/SIGPIPE信号/" rel="next">SIGPIPE信号</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2015/10/23/TCP-WAIT/"
+                   data-title="TIME_WAIT状态" data-url="http://iovcc.com/2015/10/23/TCP-WAIT/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <p class="post-toc-empty">此文章未包含目录</p>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

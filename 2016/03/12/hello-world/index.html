@@ -1,0 +1,686 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="socket," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="getaddrinfo1int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res);
+socket编程的目的就是进行主机与主机之间的通信，那么我们在连接目的主机之前，我们肯定要获取目的主机的一些信息，比如主机的IP地址，主机的端口号等">
+<meta property="og:type" content="article">
+<meta property="og:title" content="getaddrinfo函数">
+<meta property="og:url" content="http://iovcc.com/2016/03/12/hello-world/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="getaddrinfo1int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res);
+socket编程的目的就是进行主机与主机之间的通信，那么我们在连接目的主机之前，我们肯定要获取目的主机的一些信息，比如主机的IP地址，主机的端口号等">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.317Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="getaddrinfo函数">
+<meta name="twitter:description" content="getaddrinfo1int getaddrinfo(const char *nodename, const char *servname, const struct addrinfo *hints, struct addrinfo **res);
+socket编程的目的就是进行主机与主机之间的通信，那么我们在连接目的主机之前，我们肯定要获取目的主机的一些信息，比如主机的IP地址，主机的端口号等">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> getaddrinfo函数 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              getaddrinfo函数
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2016-03-12T16:03:26+08:00" content="2016-03-12">
+            2016-03-12
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/socket编程/" itemprop="url" rel="index">
+                  <span itemprop="name">socket编程</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2016/03/12/hello-world/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/12/hello-world/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><h2 id="getaddrinfo"><a href="#getaddrinfo" class="headerlink" title="getaddrinfo"></a>getaddrinfo</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">getaddrinfo</span><span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *nodename, <span class="keyword">const</span> <span class="keyword">char</span> *servname, <span class="keyword">const</span> <span class="keyword">struct</span> addrinfo *hints, <span class="keyword">struct</span> addrinfo **res)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>socket编程的目的就是进行主机与主机之间的通信，那么我们在连接目的主机之前，我们肯定要获取目的主机的一些信息，比如主机的IP地址，主机的端口号等等。<br>getaddrinfo函数的目的就是用来干这个的，它把获取到的信息保存到addrinfo结构体中。getaddrinfo函数应该是socket编程中第一个调用的函数，毕竟只有获取到了目的主机的信息才能通信。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> addrinfo&#123;</span><br><span class="line">	<span class="keyword">int</span> ai_flags;		<span class="comment">// AI_PASSIVE,AI_CANONNAME,...</span></span><br><span class="line">	<span class="keyword">int</span> ai_family;		<span class="comment">// AI_INET,AI_INET6,AI_UNSPEC</span></span><br><span class="line">	<span class="keyword">int</span> ai_socktype;	<span class="comment">// SOCK_STREAM,SOCK_DGRAM</span></span><br><span class="line">	<span class="keyword">int</span> ai_protocol;	<span class="comment">// 当为0的时候，系统会自动为你选取协议或者 IPPROTO_TCP,IPPROTO_UDP...</span></span><br><span class="line">	<span class="keyword">size_t</span> ai_addrlen;	<span class="comment">// ai_addr的大小</span></span><br><span class="line">	<span class="keyword">struct</span> sockaddr *ai_addr;	<span class="comment">//struct sockaddr_in 或者 struct sockaddr_in6，用来存放IP地址和端口号等信息</span></span><br><span class="line">	<span class="keyword">char</span> *ai_canonname;	<span class="comment">// 主机的canonical名字</span></span><br><span class="line">	<span class="keyword">struct</span> addrinfo *ai_next;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="参数介绍"><a href="#参数介绍" class="headerlink" title="参数介绍"></a>参数介绍</h3><ol>
+<li>nodename是目的主机的名字，可以是”www.example.com”的形式，也可以是IP地址的形式(注意是字符串表示)。</li>
+<li>servname是端口号。你可以传进来一个数字形式的端口号或者是一个服务名字，如”http” “tftp”等。系统会帮你自动转换成服务对应的端口号。</li>
+<li>最后一个传入参数是hints。我们注意到这是一个addrinfo结构的参数。这个参数是用来告诉getaddrinfo函数应该怎么去获取信息。我们只会用到该结构的ai_flags,ai_family,ai_socktype,ai_protocol这几个字段。</li>
+<li>res就是当我们获取到了目的主机信息后把这些信息保存到的地方。<br>关于hints参数：当ai_flags==AI_PASSIVE的时候，nodename可以为NULL，表示我们用INADDR_ANY(IPv4)或IN6ADDR_ANY(IPv6)填充res的地址字段，在随后的bind函数中，会用本机的ip地址自动填充sockaddr的ip地址字段<br>当ai_protocol==0的时候，系统会自动帮你获取协议，如当ai_socktype==SOCK_STREAM类型，那么系统就会知道你要使用TCP协议，那么系统就会自动帮你选取该协议。<br>当我们不知道目的主机的IP地址是ipv4还是ipv6的时候，我们可以指定ai_family=AI_UNSPEC，这样getaddrinfo函数会搜索目的主机的ipv4地址和ipv6地址。<h3 id="示例一"><a href="#示例一" class="headerlink" title="示例一"></a>示例一</h3>假如我们要获取www.example.com主机的信息<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> addrinfo hints,*res;</span><br><span class="line"><span class="built_in">memset</span>(&amp;hints,<span class="number">0</span>,<span class="keyword">sizeof</span>(hints));</span><br><span class="line">hints.ai_family=AI_UNSPEC;</span><br><span class="line">hints.ai_socktype=SOCK_STREAM;	<span class="comment">//表示我们要获取的socket类型为SOCK_STREAM类型</span></span><br><span class="line"><span class="keyword">int</span> rv=getaddrinfo(<span class="string">"www.example.com"</span>,<span class="string">"8080"</span>,&amp;hints,&amp;res);</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>上面表示我们要获取主机名为www.example.com，服务为http(8080)，并且连接的socket类型要为SOCK_STREAM。</p>
+<h3 id="示例二"><a href="#示例二" class="headerlink" title="示例二"></a>示例二</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">获取本地主机的信息</span><br><span class="line"><span class="keyword">struct</span> addrinfo hints,*res;</span><br><span class="line"><span class="built_in">memset</span>(&amp;hints,<span class="number">0</span>,<span class="keyword">sizeof</span>(hints));</span><br><span class="line">hints.ai_flags=AI_PASSIVE;</span><br><span class="line">hints.ai_family=AI_UNSPEC;</span><br><span class="line">hints.ai_socktype=SOCK_STREAM;</span><br><span class="line"><span class="keyword">int</span> rev=getaddrinfo(<span class="string">"www.example.com"</span>,<span class="string">"8080"</span>,&amp;hints,*res);</span><br></pre></td></tr></table></figure>
+<h2 id="sockaddr系列结构"><a href="#sockaddr系列结构" class="headerlink" title="sockaddr系列结构"></a>sockaddr系列结构</h2><p>通过上面我们知道，struct sockaddr结构是用来保存主机的ip地址和端口号信息的。但是我们知道ipv4和ipv6协议有很大的不同，其中就包括ip地址的长度都不一样，ipv4的ip地址只要4个字节表示，但是ipv6的ip地址要用16个字节表示。但是我们在上面看到，struct addrinfo中只有sockaddr这一个字段用来表示地址和端口号信息，那么系统是如何统一ipv4和ipv6的呢。<br>我们先来看一些结构<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> sockaddr&#123;</span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">short</span> sa_family;</span><br><span class="line">	<span class="keyword">char</span> sa_data[<span class="number">14</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> sockaddr_in&#123;</span><br><span class="line">	<span class="keyword">short</span> <span class="keyword">int</span> sin_family;	<span class="comment">// AF_INET</span></span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">short</span> <span class="keyword">int</span> sin_port;	<span class="comment">// 端口号</span></span><br><span class="line">	<span class="keyword">struct</span> in_addr sin_addr;	<span class="comment">//IP地址</span></span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">char</span> sin_zero[<span class="number">8</span>];	<span class="comment">//填充字段，为了和sockaddr一样的大小</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">struct</span> in_addr&#123;</span><br><span class="line">	<span class="keyword">uint32_t</span> s_addr;	<span class="comment">//4个字节</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> sockaddr_in6&#123;</span><br><span class="line">	<span class="keyword">u_int16_t</span> sin6_family;	<span class="comment">// AF_INET6</span></span><br><span class="line">	<span class="keyword">u_int16_t</span> sin6_port;	<span class="comment">// 端口号</span></span><br><span class="line">	<span class="keyword">u_int32_t</span> sin6_flowinfo; <span class="comment">// IPV6的flow information</span></span><br><span class="line">	<span class="keyword">struct</span> in6_addr sin_addr;	<span class="comment">//IPv6的地址</span></span><br><span class="line">	<span class="keyword">u_int32_t</span> sin6_scope_id;	<span class="comment">//Scope ID</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">struct</span> in6_addr&#123;</span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">char</span> s6_addr[<span class="number">16</span>];	<span class="comment">//IPv6地址</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们可以看到struct sockaddr_in是用来保存IPv4的地址信息，struct sockaddr_in6是用来保存IPv6的地址信息的。并且这两个结构的大小还不一样。<br>从以上三个结构中我们可以看到三个结构中的第一个字段(ai_family,sin_family,sin6_family)都是用来保存address family的。所以我们根据sockaddr的ai_family字段得出该sockaddr代表的是IPv4还是IPv6.<br>当我们通过getaddrinfo函数得到了目的主机的信息后，我们可以这样来得到地址信息:<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> sockaddr *p=res;</span><br><span class="line"><span class="keyword">struct</span> sockaddr_in *addr_4;</span><br><span class="line"><span class="keyword">struct</span> sockaddr_in6 *addr_6;</span><br><span class="line"><span class="keyword">if</span>(p-&gt;ai_family==AF_INET)&#123;</span><br><span class="line">	addr_4=(<span class="keyword">struct</span> sockaddr_in *)p;</span><br><span class="line">&#125;<span class="keyword">else</span> <span class="keyword">if</span>(p-&gt;ai_family==AF_INET6&#123;</span><br><span class="line">	add_6=(<span class="keyword">struct</span> sockaddr_in6 *)p;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>更一般的系统还提供了一个通用的结构，这个结构足够大以便能够容纳IPv4地址信息或IPv6地址信息。该结构体一般用在我们需要显示提供sockaddr结构的地方<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> sockaddr_storage&#123;</span><br><span class="line">	<span class="keyword">sa_family_t</span> ss_family;	<span class="comment">// AF_INET或AF_INET6</span></span><br><span class="line">	<span class="comment">//下面的三个字段都是用来填充的</span></span><br><span class="line">	<span class="keyword">char</span> __ss_pad1[_SS_PAD1SIZE];</span><br><span class="line">	<span class="keyword">char</span> __ss_align;</span><br><span class="line">	<span class="keyword">char</span> __ss_pad2[_SS_PAD2SIZE];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>我们可以看到struct sockaddr_storage结构体能够容纳IPv6的地址信息和IPv4的地址信息，也可以看到该结构体的第一个字段也是表示address family的字段ss_family。<br>这样我们就可以更具ss_family的值把sockaddr_storage结构转换成相应的sockaddr_in或者sockaddr_in6结构。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> sockaddr_storage addr;</span><br><span class="line"><span class="keyword">socklen_t</span> sin_size;</span><br><span class="line">accept(sockfd,(<span class="keyword">struct</span> sockaddr *)&amp;addr,&amp;sin_size);</span><br></pre></td></tr></table></figure></p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/socket/" rel="tag">#socket</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/11/30/c-异常机制/" rel="next">c++异常机制</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2016/03/12/hello-world/"
+                   data-title="getaddrinfo函数" data-url="http://iovcc.com/2016/03/12/hello-world/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#getaddrinfo"><span class="nav-number">1.</span> <span class="nav-text">getaddrinfo</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#参数介绍"><span class="nav-number">1.1.</span> <span class="nav-text">参数介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#示例一"><span class="nav-number">1.2.</span> <span class="nav-text">示例一</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#示例二"><span class="nav-number">1.3.</span> <span class="nav-text">示例二</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sockaddr系列结构"><span class="nav-number">2.</span> <span class="nav-text">sockaddr系列结构</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>

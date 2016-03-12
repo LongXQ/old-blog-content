@@ -1,0 +1,678 @@
+<!doctype html>
+<html class="theme-next use-motion theme-next-mist">
+<head>
+  
+
+<meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+  <link rel="stylesheet" type="text/css" href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5"/>
+
+
+
+
+<link rel="stylesheet" type="text/css" href="/css/main.css?v=0.4.5.1"/>
+
+
+    <meta name="description" content="丑霸一枚" />
+
+
+
+  <meta name="keywords" content="Linux系统编程," />
+
+
+
+
+
+  <link rel="shorticon icon" type="image/x-icon" href="/favicon.ico?v=0.4.5.1" />
+
+
+<meta name="description" content="写程序的时候经常搞不清fcntl，ioctl和setsockopt的区别，而且其中每一个函数的参数也是这么多，所以作下笔记给以后写程序的时候参考参考。我们都知道Linux(unix)中所有的东西都是文件，Linux把大部分东西都虚拟成了一个文件，也就是平常我们写程序一般都是基于在VFS(虚拟文件系统)之上的。通过VFS和硬件打交道。
+fcntl函数fcntl函数作用在VFS层，它控制文件系统的一些">
+<meta property="og:type" content="article">
+<meta property="og:title" content="fcntl ioctl setsockopt使用说明">
+<meta property="og:url" content="http://iovcc.com/2015/10/13/fcntl-ioctl-setsockopt使用说明/index.html">
+<meta property="og:site_name" content="坚持锻炼">
+<meta property="og:description" content="写程序的时候经常搞不清fcntl，ioctl和setsockopt的区别，而且其中每一个函数的参数也是这么多，所以作下笔记给以后写程序的时候参考参考。我们都知道Linux(unix)中所有的东西都是文件，Linux把大部分东西都虚拟成了一个文件，也就是平常我们写程序一般都是基于在VFS(虚拟文件系统)之上的。通过VFS和硬件打交道。
+fcntl函数fcntl函数作用在VFS层，它控制文件系统的一些">
+<meta property="og:image" content="http://iovcc.com/images/VFS.png">
+<meta property="og:updated_time" content="2016-03-12T08:03:26.278Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="fcntl ioctl setsockopt使用说明">
+<meta name="twitter:description" content="写程序的时候经常搞不清fcntl，ioctl和setsockopt的区别，而且其中每一个函数的参数也是这么多，所以作下笔记给以后写程序的时候参考参考。我们都知道Linux(unix)中所有的东西都是文件，Linux把大部分东西都虚拟成了一个文件，也就是平常我们写程序一般都是基于在VFS(虚拟文件系统)之上的。通过VFS和硬件打交道。
+fcntl函数fcntl函数作用在VFS层，它控制文件系统的一些">
+<meta name="twitter:image" content="http://iovcc.com/images/VFS.png">
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: 'post'
+  };
+</script>
+
+  <title> fcntl ioctl setsockopt使用说明 | 坚持锻炼 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  <!--[if lte IE 8]>
+  <div style=' clear: both; height: 59px; padding:0 0 0 15px; position: relative;margin:0 auto;'>
+    <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home?ocid=ie6_countdown_bannercode">
+      <img src="http://7u2nvr.com1.z0.glb.clouddn.com/picouterie.jpg" border="0" height="42" width="820"
+           alt="You are using an outdated browser. For a faster, safer browsing experience, upgrade for free today or use other browser ,like chrome firefox safari."
+           style='margin-left:auto;margin-right:auto;display: block;'/>
+    </a>
+  </div>
+<![endif]-->
+  
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?5ba8d0a18b1ab8a44c3c0e6556c5017f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <div class="container one-column page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><h1 class="site-meta">
+  <span class="logo-line-before"><i></i></span>
+  <a href="/" class="brand" rel="start">
+      <span class="logo">
+        <i class="icon-next-logo"></i>
+      </span>
+      <span class="site-title">坚持锻炼</span>
+  </a>
+  <span class="logo-line-after"><i></i></span>
+</h1>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            <i class="menu-item-icon icon-next-home"></i> <br />
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            <i class="menu-item-icon icon-next-categories"></i> <br />
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            <i class="menu-item-icon icon-next-archives"></i> <br />
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            <i class="menu-item-icon icon-next-tags"></i> <br />
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-commonweal">
+          <a href="/404.html" rel="section">
+            <i class="menu-item-icon icon-next-commonweal"></i> <br />
+            公益404
+          </a>
+        </li>
+      
+
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div id="content" class="content"> 
+
+  <div id="posts" class="posts-expand">
+    
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <header class="post-header">
+
+      
+      
+        <h1 class="post-title" itemprop="name headline">
+          
+          
+            
+              fcntl ioctl setsockopt使用说明
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于
+          <time itemprop="dateCreated" datetime="2015-10-13T16:26:58+08:00" content="2015-10-13">
+            2015-10-13
+          </time>
+        </span>
+
+        
+          <span class="post-category" >
+            &nbsp; | &nbsp; 分类于
+            
+              <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                <a href="/categories/Linux系统编程/" itemprop="url" rel="index">
+                  <span itemprop="name">Linux系统编程</span>
+                </a>
+              </span>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+              &nbsp; | &nbsp;
+              <a href="/2015/10/13/fcntl-ioctl-setsockopt使用说明/#comments" itemprop="discussionUrl">
+                <span class="post-comments-count ds-thread-count" data-thread-key="2015/10/13/fcntl-ioctl-setsockopt使用说明/" itemprop="commentsCount"></span>
+              </a>
+            </span>
+          
+        
+      </div>
+    </header>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        <span itemprop="articleBody"><p>写程序的时候经常搞不清fcntl，ioctl和setsockopt的区别，而且其中每一个函数的参数也是这么多，所以作下笔记给以后写程序的时候参考参考。<br>我们都知道Linux(unix)中所有的东西都是文件，Linux把大部分东西都虚拟成了一个文件，也就是平常我们写程序一般都是基于在VFS(虚拟文件系统)之上的。通过VFS和硬件打交道。<br><img src="/images/VFS.png" alt="VFS模型"></p>
+<h3 id="fcntl函数"><a href="#fcntl函数" class="headerlink" title="fcntl函数"></a>fcntl函数</h3><p>fcntl函数作用在VFS层，它控制文件系统的一些参数，如文件访描述符标志，文件状态标志等。<br><strong>F_GETFD</strong><br>    读取文件描述符标志<br><strong>F_SETFD</strong><br>    设置文件描述符标志<br>    现阶段指支持这一个标志:FD_CLOEXEC(close-on-exec)，这个标志的作用是在执行exec的时候在子进程中关闭设置了FD_CLOEXEC的fd，这个标志也可以在open函数在打开一个文件的时候使用O_CLOEXEC。<br><strong>F_GETFL</strong><br>    读取文件访问权限和文件状态标志。<br><strong>F_SETFL</strong><br>    虽然F_GETFL能够读取到文件的访问权限，但是不能用fcntl设置他们。<br>    <strong>O_APPEND</strong> 设置文件追加到文件末尾标志<br>    <strong>O_ASYNC</strong> 当文件能够读或者写的时候可以发送信号(SIGIO)。这个特性仅仅对终端，伪终端，sockets和pipes和FIFOs有用。<br>    <strong>O_DIRECT</strong> 直接从设备中读写<br>    <strong>O_NOATIME</strong> 不更新文件最后一次访问时间(inode中的st_atime属性)</p>
+<pre><code>**O_NONBLOCK** 设置文件为非阻塞标志
+</code></pre><hr>
+<h3 id="ioctl函数"><a href="#ioctl函数" class="headerlink" title="ioctl函数"></a>ioctl函数</h3><h2 id="ioctl则是直接控制一些IO设备的一些属性，对设备的一些特性进行控制。如终端设备的波特率这些。ioctl和设备关系密切，所以再次就不一一列举控制参数了。一个fd能够被ioctl操作前提是fd对应的设备在驱动程序中实现了ioctl函数。"><a href="#ioctl则是直接控制一些IO设备的一些属性，对设备的一些特性进行控制。如终端设备的波特率这些。ioctl和设备关系密切，所以再次就不一一列举控制参数了。一个fd能够被ioctl操作前提是fd对应的设备在驱动程序中实现了ioctl函数。" class="headerlink" title="ioctl则是直接控制一些IO设备的一些属性，对设备的一些特性进行控制。如终端设备的波特率这些。ioctl和设备关系密切，所以再次就不一一列举控制参数了。一个fd能够被ioctl操作前提是fd对应的设备在驱动程序中实现了ioctl函数。"></a>ioctl则是直接控制一些IO设备的一些属性，对设备的一些特性进行控制。如终端设备的波特率这些。ioctl和设备关系密切，所以再次就不一一列举控制参数了。一个fd能够被ioctl操作前提是fd对应的设备在驱动程序中实现了ioctl函数。</h2><h3 id="setsockopt函数"><a href="#setsockopt函数" class="headerlink" title="setsockopt函数"></a>setsockopt函数</h3><p>setsockopt函数则是专门控制socket的一些参数。它指定了在不同的level上面设置参数。<br><strong>SOL_SOCKET</strong> sockets API level<br>    SO_KEEPALIVE<br>        设置TCP的keep alive选项，去探测失效的一端<br>    SO_SNDBUF<br>        设置发送buffer<br>    SO_SNDTIMEO SO_RCVTIMEO<br>        发送或者接收超时时间，直到一个错误产生。<br>    SO_REUSEADDR<br>        重用地址端口。当一个端口关闭时，这个socket处于TIME_WAIT状态，假如我们在新建一个socket，但是又绑定处于TIME-WAIT状态的端口，则会出错，但是如果设置了这个选项，则不会出错了。<br>    SO_BROADCAST<br>        设置broadcast标志。UDP socket能够发送数据给broadcast地址，对TCP socket无效。<br>    SO_ERROR<br>        得到和清除pending socket error。<br>    SO_RCVBUF<br>        设置或得到socket接收buffer<br><strong>IPPROTO_TCP</strong><br>    TCP_KEEPIDLE<br>        如果在设置的时间内没有响应则发送心跳包检测<br>    TCP_KEEPINTVL<br>        设置发送心跳包的时间间隔<br>    TCP_KEEPCNT<br>        设置发送心跳包的次数<br>    TCP_NODELAY<br>        禁用TCP协议中的Nagle算法</p>
+</span>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Linux系统编程/" rel="tag">#Linux系统编程</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/10/13/SIGPIPE信号/" rel="prev">SIGPIPE信号</a>
+            
+          </div>
+
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/10/13/Redis-事件处理实现/" rel="next">Redis-事件处理实现</a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+ </div>
+
+        
+            <!-- 多说热评文章-->
+            <p>热评文章</p>
+            <div class="ds-top-threads" data-range="weekly" data-num-items="4"></div>
+        
+
+        
+          <div class="comments" id="comments">
+            
+              <div class="ds-thread" data-thread-key="2015/10/13/fcntl-ioctl-setsockopt使用说明/"
+                   data-title="fcntl ioctl setsockopt使用说明" data-url="http://iovcc.com/2015/10/13/fcntl-ioctl-setsockopt使用说明/">
+              </div>
+            
+          </div>
+        
+      </div>
+
+      
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" src="/images/xiaohuangren.png" alt="龙雄球" itemprop="image"/>
+          <p class="site-author-name" itemprop="name">龙雄球</p>
+        </div>
+        <p class="site-description motion-element" itemprop="description">丑霸一枚</p>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">23</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          <div class="site-state-item site-state-categories">
+            <a href="/categories">
+              <span class="site-state-item-count">4</span>
+              <span class="site-state-item-name">分类</span>
+              </a>
+          </div>
+
+          <div class="site-state-item site-state-tags">
+            <a href="/tags">
+              <span class="site-state-item-count">7</span>
+              <span class="site-state-item-name">标签</span>
+              </a>
+          </div>
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator"></div>
+          <div class="post-toc">
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#fcntl函数"><span class="nav-number">1.</span> <span class="nav-text">fcntl函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ioctl函数"><span class="nav-number">2.</span> <span class="nav-text">ioctl函数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ioctl则是直接控制一些IO设备的一些属性，对设备的一些特性进行控制。如终端设备的波特率这些。ioctl和设备关系密切，所以再次就不一一列举控制参数了。一个fd能够被ioctl操作前提是fd对应的设备在驱动程序中实现了ioctl函数。"><span class="nav-number"></span> <span class="nav-text">ioctl则是直接控制一些IO设备的一些属性，对设备的一些特性进行控制。如终端设备的波特率这些。ioctl和设备关系密切，所以再次就不一一列举控制参数了。一个fd能够被ioctl操作前提是fd对应的设备在驱动程序中实现了ioctl函数。</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#setsockopt函数"><span class="nav-number">1.</span> <span class="nav-text">setsockopt函数</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator"></div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner"> <div class="copyright" >
+  
+  &copy; &nbsp; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">龙雄球</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+ </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  
+  
+    
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"iovcc"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+    
+     
+
+    
+  
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+  <script type="text/javascript" src="/js/fancy-box.js?v=0.4.5.1"></script>
+
+
+  <script type="text/javascript" src="/js/helpers.js?v=0.4.5.1"></script>
+  
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/js/motion_global.js?v=0.4.5.1" id="motion.global"></script>
+
+
+
+
+  <script type="text/javascript" src="/js/nav-toggle.js?v=0.4.5.1"></script>
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  
+<script type="text/javascript" src="/js/bootstrap.scrollspy.js?v=0.4.5.1" id="bootstrap.scrollspy.custom"></script>
+
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 0.4 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    var $tocContent = $('.post-toc-content');
+    if (isDesktop() && CONFIG.sidebar === 'post') {
+      if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+        displaySidebar();
+      }
+    }
+  });
+</script>
+
+
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      if (CONFIG.sidebar === 'always') {
+        displaySidebar();
+      }
+      if (isMobile()) {
+        FastClick.attach(document.body);
+      }
+    });
+  </script>
+
+  
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+      processEscapes: true,
+      skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for (i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/lazyload.js"></script>
+  <script type="text/javascript">
+    $(function () {
+      $("#posts").find('img').lazyload({
+        placeholder: "/images/loading.gif",
+        effect: "fadeIn"
+      });
+    });
+  </script>
+</body>
+</html>
